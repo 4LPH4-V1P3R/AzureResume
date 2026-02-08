@@ -27,7 +27,7 @@ public class GetResumeCounter
     }
 
     [Function("GetResumeCounter")]
-    public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "get", "post")] HttpRequest req)
+    public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")] HttpRequest req)
     {
         _logger.LogInformation("GetResumeCounter function triggered.");
 
