@@ -11,6 +11,21 @@ variables:
   backendPath: 'AzureResumeBackEnd/api'
 
 stages:
+  - stage: MirrorToAzureRepos
+    displayName: 'Mirror to Azure Repos'
+    jobs:
+      - job: Mirror
+        displayName: 'Push to Azure Repos'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - checkout: self
+            fetchDepth: 0
+          - script: |
+              git remote add azurerepos https://$(AZURE_DEVOPS_PAT)@dev.azure.com/hkyle525/Resume/_git/Resume
+              git push azurerepos HEAD:refs/heads/main --force
+            displayName: 'Push to Azure Repos'
+
   - stage: BuildAndDeployBackend
     displayName: 'Build & Deploy Backend'
     jobs:
@@ -39,7 +54,8 @@ stages:
 
   - stage: DeployFrontend
     displayName: 'Deploy Frontend'
-    dependsOn: BuildAndDeployBackend
+    dependsOn:
+      - BuildAndDeployBackend
     jobs:
       - job: UploadToBlob
         displayName: 'Upload frontend to $web container'
