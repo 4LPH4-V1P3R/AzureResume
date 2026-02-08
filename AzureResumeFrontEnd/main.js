@@ -11,9 +11,9 @@ window.addEventListener('DOMContentLoaded', (event) => {
     });
 });
 
-// TODO: Replace with your Azure Function URL after deployment
+// TODO: Replace with your deployed Azure Function URL
 // e.g. https://<your-function-app>.azurewebsites.net/api/GetResumeCounter
-const functionApi = 'https://your-function-app.azurewebsites.net/api/GetResumeCounter';
+const functionApi = 'http://localhost:7071/api/GetResumeCounter';
 
 const getVisitCount = () => {
     let count = 30;
@@ -25,6 +25,7 @@ const getVisitCount = () => {
         document.getElementById("counter").innerText = count;
     }).catch(function(error) {
         console.log(error);
+        document.getElementById("counter").innerText = count;
     });
     return count;
 }
