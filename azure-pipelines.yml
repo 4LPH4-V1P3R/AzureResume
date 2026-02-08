@@ -1,0 +1,60 @@
+trigger:
+  branches:
+    include:
+      - main
+
+variables:
+  azureSubscription: 'azure-resume-sc'
+  functionAppName: 'khardiman-resume-api'
+  storageAccount: 'khardiman'
+  frontendPath: 'AzureResumeFrontEnd'
+  backendPath: 'AzureResumeBackEnd/api'
+
+stages:
+  - stage: BuildAndDeployBackend
+    displayName: 'Build & Deploy Backend'
+    jobs:
+      - job: BuildAndDeploy
+        displayName: 'Build and deploy Azure Function'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: UseDotNet@2
+            displayName: 'Install .NET 8 SDK'
+            inputs:
+              packageType: 'sdk'
+              version: '8.x'
+
+          - script: dotnet publish $(backendPath)/api.csproj --configuration Release --output $(Build.ArtifactStagingDirectory)/backend
+            displayName: 'Publish function app'
+
+          - task: AzureFunctionApp@2
+            displayName: 'Deploy to Azure Function App'
+            inputs:
+              azureSubscription: '$(azureSubscription)'
+              appType: 'functionAppLinux'
+              appName: '$(functionAppName)'
+              package: '$(Build.ArtifactStagingDirectory)/backend'
+              runtimeStack: 'DOTNET-ISOLATED|8.0'
+
+  - stage: DeployFrontend
+    displayName: 'Deploy Frontend'
+    dependsOn: BuildAndDeployBackend
+    jobs:
+      - job: UploadToBlob
+        displayName: 'Upload frontend to $web container'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: AzureCLI@2
+            displayName: 'Upload to $web blob container'
+            inputs:
+              azureSubscription: '$(azureSubscription)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az storage blob upload-batch \
+                  --account-name $(storageAccount) \
+                  --destination '$web' \
+                  --source $(frontendPath) \
+                  --overwrite
