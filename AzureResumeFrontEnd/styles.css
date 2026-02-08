@@ -40,6 +40,10 @@ h1 {
     background-color: #0056b3;
 }
 
+.category-title a {
+    color: #fff;
+}
+
 .category-content {
     display: none;
 }
