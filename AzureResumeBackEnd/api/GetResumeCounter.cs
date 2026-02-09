@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Cosmos;
@@ -15,10 +16,14 @@ public class GetResumeCounter
     private const string ContainerName = "Counter";
     private const string CounterId = "1";
 
-    public GetResumeCounter(ILogger<GetResumeCounter> logger, CosmosClient cosmosClient)
+    public GetResumeCounter(ILogger<GetResumeCounter> logger)
     {
         _logger = logger;
-        _cosmosClient = cosmosClient;
+        var connectionString = Environment.GetEnvironmentVariable("AzureConnectionString");
+        _cosmosClient = new CosmosClient(connectionString, new CosmosClientOptions
+        {
+            UseSystemTextJsonSerializerWithOptions = new JsonSerializerOptions()
+        });
     }
 
     [Function("GetResumeCounter")]
@@ -26,48 +31,18 @@ public class GetResumeCounter
     {
         _logger.LogInformation("GetResumeCounter function triggered.");
 
-        try
-        {
-            var container = _cosmosClient.GetContainer(DatabaseName, ContainerName);
-            var partitionKey = new PartitionKey(CounterId);
+        var container = _cosmosClient.GetContainer(DatabaseName, ContainerName);
+        var partitionKey = new PartitionKey(CounterId);
 
-            // Read with ETag for optimistic concurrency
-            var response = await container.ReadItemAsync<Counter>(CounterId, partitionKey);
-            var counter = response.Resource;
-            var etag = response.ETag;
+        var response = await container.ReadItemAsync<Counter>(CounterId, partitionKey);
+        var counter = response.Resource;
 
-            counter.Count++;
+        counter.Count++;
 
-            // Replace only if the document hasn't changed since we read it
-            await container.ReplaceItemAsync(counter, CounterId, partitionKey, new ItemRequestOptions
-            {
-                IfMatchEtag = etag
-            });
+        await container.ReplaceItemAsync(counter, CounterId, partitionKey);
 
-            _logger.LogInformation("Counter updated to {Count}.", counter.Count);
+        _logger.LogInformation($"Counter updated to {counter.Count}.");
 
-            return new OkObjectResult(counter);
-        }
-        catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.PreconditionFailed)
-        {
-            // Concurrency conflict — another request updated the counter first.
-            // Re-read the latest value and return it without retrying the increment.
-            _logger.LogWarning("Concurrency conflict on counter increment. Returning latest value.");
-
-            var container = _cosmosClient.GetContainer(DatabaseName, ContainerName);
-            var response = await container.ReadItemAsync<Counter>(CounterId, new PartitionKey(CounterId));
-
-            return new OkObjectResult(response.Resource);
-        }
-        catch (CosmosException ex)
-        {
-            _logger.LogError(ex, "CosmosDB error: {StatusCode} - {Message}", ex.StatusCode, ex.Message);
-            return new StatusCodeResult(StatusCodes.Status503ServiceUnavailable);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error in GetResumeCounter.");
-            return new StatusCodeResult(StatusCodes.Status500InternalServerError);
-        }
+        return new OkObjectResult(counter);
     }
 }
