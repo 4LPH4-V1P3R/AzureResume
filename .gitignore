@@ -1,1 +1,28 @@
-nul
+# Build results
+[Dd]ebug/
+[Rr]elease/
+[Bb]in/
+[Oo]bj/
+publish/
+
+# IDE / editor
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Azure Functions local settings (may contain secrets)
+local.settings.json
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Node
+node_modules/
+
+# Logs
+*.log
+[Ll]og/
